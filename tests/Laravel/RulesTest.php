@@ -68,8 +68,14 @@ it('validates formats without resolving a network checker', function (string $in
     $validator = validateIdentifier($input, $rule);
     Assert::assertFalse($validator->fails());
 })->with([
-    ['RB/COT/18 B 22272', new RccmRule],
-    ['3202444139959', new IfuRule],
+    ...array_map(
+        static fn (string $input): array => [$input, new RccmRule],
+        array_column(IdentifierCases::validRccm(), 0),
+    ),
+    ...array_map(
+        static fn (string $input): array => [$input, new IfuRule],
+        array_column(IdentifierCases::validIfu(), 0),
+    ),
 ]);
 
 it('accepts unavailable IFU checks by default and rejects them in strict mode', function (string $locale, bool $strict): void {

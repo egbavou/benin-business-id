@@ -160,7 +160,7 @@ Cas `Found`, `NotFound`, `InvalidFormat` et `Unavailable`, propres à ce package
 Le constructeur est privé ; seules les méthodes statiques créent l'objet.
 
 **Algorithme, dans cet ordre :**
-1. **Nettoyage.** Retirer tous les espaces, y compris l'espace insécable U+00A0, l'espace fine U+202F et toute la classe Unicode `\s` / `\p{Zs}`, ainsi que les points `.` et les tirets `-`. Aucun autre retrait : `IFU`, `N°`, `:` et `BJ-IFU-` ne sont pas retirés.
+1. **Nettoyage.** Expression commune aux trois packages (D37) : `/[\p{Z}\x{0009}-\x{000D}\x{0085}.\-]+/u`. Elle retire tous les séparateurs Unicode (`\p{Z}`, dont U+00A0, U+202F, U+2028, U+2029), les caractères de contrôle d'espacement U+0009 à U+000D et U+0085, les points `.` et les tirets `-`. U+180E (Mongolian vowel separator, devenu un caractère de format depuis Unicode 6.3) et U+200B ne sont **pas** retirés : ils donnent `InvalidCharacters`. Aucun autre retrait : `IFU`, `N°`, `:` et `BJ-IFU-` ne sont pas retirés.
 2. Si la chaîne contient autre chose que `0-9` : `InvalidCharacters`.
 3. Si la longueur est différente de 13 : `InvalidLength`, y compris pour une chaîne vide.
 4. Si le premier chiffre n'est pas entre 0 et 6 : `UnknownTaxpayerType`.

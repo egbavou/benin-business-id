@@ -38,11 +38,12 @@ $rccm->sequenceNumber;       // 1432
 `from()` throws `InvalidIdentifierException` with a `FailureReason` in `reason`.
 `FailureReason` values are the translation keys under `validation.ifu` or
 `validation.rccm` (for example, `invalid_characters` and `invalid_year`).
-`format()` and string conversion return the normalized value. Spaces (including
-Unicode spaces), dots and hyphens are removed. Prefixes, annotations and full
-city names are rejected. RCCM year spelling and sequence leading zeros are
-preserved. IFUs require 13 digits, a type digit from 0 to 6 and a registration
-year from 2006 through the current year. No unpublished checksum is guessed.
+`format()` and string conversion return the normalized value. Unicode separators
+of category Z, U+0009–U+000D, U+0085, dots and hyphens are removed. Prefixes,
+annotations and full city names are rejected. RCCM year spelling and sequence
+leading zeros are preserved. IFUs require 13 digits, a type digit from 0 to 6
+and a registration year from 2006 through the current year. No unpublished
+checksum is guessed.
 Format validation never makes HTTP requests and does not establish existence.
 
 `TaxpayerType` has five cases: `Individual` (digits 0, 1 or 2), `Company` (3),

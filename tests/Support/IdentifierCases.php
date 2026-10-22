@@ -24,6 +24,10 @@ final class IdentifierCases
             ['1201500000000', '1201500000000', TaxpayerType::Individual, 2015],
             ['0201500000000', '0201500000000', TaxpayerType::Individual, 2015],
             ['2201500000000', '2201500000000', TaxpayerType::Individual, 2015],
+            ...array_map(
+                static fn (string $separator): array => ["32024{$separator}44139959", '3202444139959', TaxpayerType::Company, 2024],
+                self::strippedSeparators(),
+            ),
         ];
     }
 
@@ -36,6 +40,8 @@ final class IdentifierCases
             ['320244413995', FailureReason::InvalidLength],
             ['32024441399590', FailureReason::InvalidLength],
             ['3202444139A59', FailureReason::InvalidCharacters],
+            ["32024\u{180E}44139959", FailureReason::InvalidCharacters],
+            ["32024\u{200B}44139959", FailureReason::InvalidCharacters],
             ['IFU : 3202444139959', FailureReason::InvalidCharacters],
             ['BJ-IFU-3200901353510', FailureReason::InvalidCharacters],
             ['7202400000000', FailureReason::UnknownTaxpayerType],
@@ -71,6 +77,10 @@ final class IdentifierCases
             ['RB/COT/20 E 2841', 'RB/COT/20 E 2841', 2020],
             ['RB/ABC/26 B 11379', 'RB/ABC/26 B 11379', 2026],
             ["\u{2003}RB/PKO/18\u{00A0}A\u{202F}00001", 'RB/PKO/18 A 00001', 2018],
+            ...array_map(
+                static fn (string $separator): array => ["RB/COT/18{$separator}B/22272", 'RB/COT/18 B 22272', 2018],
+                self::strippedSeparators(),
+            ),
         ];
     }
 
@@ -79,6 +89,8 @@ final class IdentifierCases
     {
         return [
             ['RCCM : RB/COT/24 B 39072', FailureReason::InvalidCharacters],
+            ["RB/COT/18\u{180E}B 22272", FailureReason::InvalidCharacters],
+            ["RB/COT/18\u{200B}B 22272", FailureReason::InvalidCharacters],
             ['RB/COT/07 B 2058 (Ancien n°: 02 B 1545)', FailureReason::InvalidCharacters],
             ['RCCM RB/COT/25 B 41160', FailureReason::InvalidStructure],
             ['RB/PKO 18 B 277 du 13/06/2018', FailureReason::InvalidStructure],
@@ -105,6 +117,40 @@ final class IdentifierCases
             ['RB/ZZZ/1985 M 12', FailureReason::UnknownRegistry],
             ['RB/ODH/2021 M 12', FailureReason::UnknownCategory],
             ['RB/ODH/2021 B 12', FailureReason::InvalidYear],
+        ];
+    }
+
+    /** @return list<string> */
+    private static function strippedSeparators(): array
+    {
+        return [
+            "\u{0009}",
+            "\u{000A}",
+            "\u{000B}",
+            "\u{000C}",
+            "\u{000D}",
+            "\u{0020}",
+            "\u{0085}",
+            "\u{00A0}",
+            "\u{1680}",
+            "\u{2000}",
+            "\u{2001}",
+            "\u{2002}",
+            "\u{2003}",
+            "\u{2004}",
+            "\u{2005}",
+            "\u{2006}",
+            "\u{2007}",
+            "\u{2008}",
+            "\u{2009}",
+            "\u{200A}",
+            "\u{2028}",
+            "\u{2029}",
+            "\u{202F}",
+            "\u{205F}",
+            "\u{3000}",
+            '.',
+            '-',
         ];
     }
 }
