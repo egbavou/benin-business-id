@@ -56,6 +56,7 @@ Le détail des décisions est au §6.
 | Guide DGI « Tout savoir sur l'IFU au Bénin », DIRCOM/PR, octobre 2020 | « IFU = numéro à 13 chiffres » (p. 5). Donne le premier chiffre selon le type de contribuable (§1.3). | https://www.gouv.bj/doc/158/download (relu) | H |
 | Document DGI « Tout sur l'identifiant fiscal unique », février 2014 (mis en ligne en 2016) | « entièrement numérique et composé de 13 caractères ». Il découpe le numéro en 5 segments : statut (1 à 6), année d'immatriculation (4), séquence (6), ordre (1), clé de contrôle (1), cette dernière « créé[e] par un algorithme », sans plus de détail. | https://impots.finances.gouv.bj/wp-content/uploads/2016/12/IFU.pdf, serveur injoignable le 21/10/2026 ; copie archivée relue : https://web.archive.org/web/20190214115719/http://www.impots.finances.gouv.bj:80/wp-content/uploads/2016/12/IFU.pdf | H |
 | Code général des impôts 2022 (loi n° 2021-15 du 23/12/2021), art. 460 à 462 et 495 | Obligation de s'immatriculer, mention de l'IFU sur les documents, opérations qui l'exigent, sanctions en cas d'IFU absent ou faux. **Rien sur le format.** | https://sgg.gouv.bj/doc/loi-2021-15/download (relu, texte issu d'une reconnaissance de caractères) | H |
+| **Code général des impôts 2026 consolidé** (loi n° 2021-15 mise à jour de la loi de finances 2026, loi n° 2025-22 du 08/12/2025), art. 460 à 462 modifiés par les lois de finances 2023 et 2024 | Immatriculation, opérations exigeant l'IFU, registre des bénéficiaires effectifs. **Rien sur le format** : aucune occurrence de « treize », « 13 chiffres » ou « chiffre clé ». | DGI, PDF « Code Général des Impôts 2026 » (créé le 23/01/2026), lu via une copie archivée le 22/10/2026 (§7) | H |
 | Portail DGI `ifu.impots.bj` (code public de l'application) | Le seul contrôle appliqué à un IFU saisi est sa longueur : 13 caractères, avec le message « Ce champs est obligatoire et doit contenir 13 chiffres ! ». | https://ifu.impots.bj (relu, 21/10/2026) | H |
 | org-id.guide, liste `BJ-IFU` | Même découpage 1 + 4 + 6 + 1 + 1, exemple `3200901353510`. Le dernier chiffre est décrit comme un « checksum », sans algorithme. Le guide note qu'aucune source en ligne du registre n'a été trouvée. | https://org-id.guide/list/BJ-IFU (relu) | M |
 | API e-MCF (facturation électronique DGI) | Swagger officiel : champ `ifu` de type `string`, sans motif. La spécification v1.0 du 15/01/2021 indique 13 caractères et donne les valeurs de test `9999900000001` et `9999900000002`. | https://developper.impots.bj/sygmef-emcf/swagger/v1/swagger.json (relu) ; spécification v1.0 trouvée seulement dans un dépôt tiers : https://raw.githubusercontent.com/codianselme/lara-sygmef/master/docs/e-MECeF_API_v1.0.pdf | H (swagger), M (spécification) |
@@ -127,7 +128,7 @@ Les scripts de test et la liste de 358 IFU n'ont pas été copiés dans ce dép�
 | 08/12/2021 | IFU obtenu en ligne grâce au **NPI** (Numéro Personnel d'Identification de l'ANIP) | https://www.gouv.bj/article/1600/dgi-obtenez-desormais-votre-moins-24h-avec-votre-numero-personnel-identification-/ | H |
 | avril 2022 | Nouvelle **attestation** IFU avec QR code, délivrée sur e-services.impots.bj. C'est le document qui change, pas le numéro. | presse : https://triomphemag.com/benin-nouveau-format-de-delivrance-en-ligne-de-lidentifiant-fiscal-unique-ifu/ | M |
 
-**Aucun texte trouvé ne change la longueur ou la structure du numéro entre 2015 et 2026** [M]. Les articles du Code général des impôts de 2022 (loi 2021-15) consacrés à l'IFU n'ont pas pu être lus : le PDF officiel était trop lourd et les serveurs DGI injoignables.
+**Aucun texte trouvé ne change la longueur ou la structure du numéro entre 2015 et 2026** [M]. Les articles du Code général des impôts consacrés à l'IFU (art. 460 à 462) ont été lus dans le CGI 2022 puis dans le CGI 2026 consolidé : ils ne fixent aucun format (§7).
 
 **Le NPI n'est pas un IFU.** C'est un identifiant de personne physique délivré par l'ANIP. Le portail DGI accepte « IFU ou NPI » dans sa recherche, mais le NPI sort du périmètre du package.
 
@@ -143,7 +144,7 @@ L'utilisateur a demandé, le 21/10/2026, d'appliquer la règle déclarée par l'
 | Chiffres 6 à 11 | séquence dans l'année | document DGI 2014 |
 | Chiffre 12 | ordre : 0, 1 ou 2 à 9, donc tout chiffre est admis | document DGI 2014 |
 | Chiffre 13 | clé de contrôle « créée par un algorithme » non publié | décrets ; document DGI 2014 |
-| Textes en vigueur | le décret 2017-215 et le CGI 2022 ne disent rien du format | relus |
+| Textes en vigueur | le décret 2017-215 et le CGI 2026 consolidé ne disent rien du format | relus (22/10/2026) |
 
 **Règle déclarée, traduisible en code :**
 - 13 chiffres ;
@@ -617,7 +618,7 @@ Sélection de personnes morales seulement. Les IFU de personnes physiques trouv�
 2. Le sens exact du premier chiffre 0 et la réalité du 5 : un seul document DGI de 2014 le cite, et le guide 2020 n'en parle pas.
 3. Le classement réel des collectivités (4, 5 ou 6).
 4. La numérotation depuis 2017 : il semble y avoir une séquence de 7 chiffres, mais cela repose sur 12 exemples, sans texte.
-5. Les articles du CGI 2022 consacrés à l'IFU, non lus.
+5. ~~Les articles du CGI consacrés à l'IFU, non lus.~~ Levé le 22/10/2026 : le CGI 2026 consolidé (art. 460 à 462) est muet sur le format (§7).
 6. Ce que renvoie la recherche du portail DGI (nom, statut ?), non observé à cause du reCAPTCHA.
 
 **RCCM**
@@ -697,3 +698,55 @@ Conventions reçues de la session parente :
 - Plan d'implémentation pour Codex : `docs/design/benin-business-id-spec.md`.
 - **Noms d'API** : définitifs depuis le 21/10/2026, à l'issue de l'exercice de nommage commun. Ils sont identiques à ceux du plan. Le slug `benin-business-id` n'a pas de préfixe `egbavou-`.
 - `NotFound` pour un RCCM absent de l'annuaire, en documentant que l'exhaustivité n'est pas garantie : à confirmer avec le contrat commun.
+
+---
+
+## 7. Vérification d'actualité du 22/10/2026
+
+Demandée par l'utilisateur (« il faut pas qu'on se trompe à ce niveau ») après la découverte, côté TVA, d'une source principale vieillie. Objet : vérifier que chaque règle repose sur l'état **actuel** du droit et de la pratique. Méthode : deux recherches documentaires (sources primaires en priorité), relecture directe des sources clés, et un contrôle statistique du registre officiel.
+
+**Conclusion : aucune règle de format n'est à changer.** Seule la référence au Code général des impôts a été mise à jour (CGI 2026 consolidé).
+
+### 7.1 IFU
+
+| Règle | Source | Date | Statut |
+|---|---|---|---|
+| 13 chiffres | décrets 2006-201 et 2015-268 ; document DGI 2014 ; guide DGI 2020 ; contrôle du portail DGI | 2006 à 2020 | à jour : aucun texte plus récent ne change la longueur |
+| 1er chiffre de 0 à 6 | document DGI 2014 ; guide DGI 2020 | 2014, 2020 | à jour ; le 0 est confirmé sur une attestation de 2024 |
+| Année de 2006 à l'année en cours | idem | 2014, 2020 | à jour |
+| Clé non vérifiée | aucun algorithme publié | — | à jour |
+| Textes en vigueur muets sur le format | décret 2017-215 ; CGI 2026 consolidé, art. 460 à 462 (relus) | 10/04/2017 ; 08/12/2025 | à jour |
+| IFU et NPI distincts | DGI, « Guide des normes de services », février 2026 : réédition « par numéro IFU / numéro NPI » | 02/2026 | à jour : le NPI sert à demander l'IFU, sans le remplacer |
+
+Textes sans effet sur le format : lois de finances 2023 (loi 2022-33), 2024 (loi 2023-01), 2025 (loi 2024-34, lue intégralement), 2026 (loi 2025-22, intégrée au CGI 2026), loi de finances rectificative 2026 (loi 2026-10, d'après la presse). Aucun décret postérieur à 2017-215 trouvé (sgg.gouv.bj est mal indexé : confiance moyenne à haute).
+
+Constats de pratique, sans effet sur le format :
+- **IFU désactivé** : depuis le 07/09/2026 (communiqué DGI du 03/09/2026), la DGI peut désactiver un IFU. Un IFU bien formé peut donc être inactif ; le package ne peut pas le savoir.
+- **Premier chiffre appliqué souplement** : des communes déclarent des IFU commençant par 4, 5 ou 6 (registre IATI). `taxpayerType` reflète le chiffre attribué, sans garantir le type réel de l'entité.
+- IFU réels récents conformes : `3202444139959` (2024), `3202592182603` (2025), `3202610754433` (2026), Port Autonome de Cotonou `3200800650214`. Aucun IFU de 2024 à 2026 hors format trouvé dans une source fiable.
+
+### 7.2 RCCM
+
+| Règle | Source | Date | Statut |
+|---|---|---|---|
+| Forme `RB/<greffe>/<année> <lettre> <numéro>` | Tribunal de commerce de Cotonou, page « Formalités au RCCM » (relue) | 22/10/2026 | à jour |
+| Pas de format imposé par l'OHADA | Acte uniforme relatif au droit commercial général du 15/12/2010, entré en vigueur le 15/05/2011, sans révision listée (https://www.ohada.org/en/general-commercial-law/, relu) | 22/10/2026 | à jour : sessions du Conseil des ministres OHADA de 2024 à 2026 sans acte sur le RCCM |
+| Lettres de catégorie | nomenclature OHADA de juin 2019, toujours la seule ; e-rccm.ohada.org ne publie depuis que des mises à jour du logiciel (dernière le 28/01/2026) | 06/2019 | à jour |
+| 11 greffes actifs, 5 anciens jusqu'en 2020 | registre officiel APIEx ; Conseil des ministres du 02/09/2026 (https://sgg.gouv.bj/cm/2026-09-02/, relu) : seuls le tribunal de commerce de Cotonou et la cour d'appel de commerce sont cités | 21–22/10/2026 | à jour : pas de tribunal de commerce installé à Abomey ni à Parakou, donc pas de nouveau code |
+| Format OHADA 2019 refusé | aucun numéro béninois dans ce format | 22/10/2026 | à jour |
+| Guichet unique | création d'entreprise toujours sur monentreprise.bj ; le guichet guichet.investbenin.bj (09/05/2025) sert l'investissement et l'export | 2025 | sans effet ; aucune ré-immatriculation changeant les numéros |
+
+**Contrôle du registre officiel des sociétés (APIEx, 22/10/2026)**, par comptages :
+
+| Année | Numéros | Greffes | Lettres | Tirets ou année sur 4 chiffres |
+|---|---|---|---|---|
+| 2025 | 5 463 | les 11 greffes actifs, aucun reste (COT 2 521, ABC 1 623, PNO 773, PKO 183, ABY 141, LKS 81, NAT 41, APL 39, DGO 32, KDI 18, SVL 11) | B 5 401, D 50, C 12 | aucun |
+| 2026 | 5 690 | les 11 greffes actifs, aucun reste (COT 2 631, ABC 1 738, PNO 727, PKO 217, ABY 153, LKS 77, NAT 45, DGO 41, APL 36, KDI 15, SVL 10) | B 5 637, D 44, C 9 | aucun |
+
+Les annonces légales APIEx de 2026 (première page, environ 100 avis) le confirment : codes COT, ABC, PNO, PKO ; lettres B et C (`RB/PNO/26 C 34`) ; années sur 2 chiffres. **Le package ne rejetterait aucun de ces numéros récents.**
+
+Limites :
+- le registre des établissements (catégorie A) répondait HTTP 503 le 22/10/2026 : le contrôle 2025–2026 n'a pas pu y être refait (le relevé complet du 21/10/2026 ne montrait aucun écart) ;
+- des documents officiels de 2025 citent encore d'anciens numéros locaux (`14.727-B`, arrêt n° 034/25 de la cour d'appel de commerce) ou des écritures inhabituelles (`RB/COT/07/B 1351`, acceptée par le package) ; les anciens numéros sont rejetés, comme prévu ;
+- l'ancien domaine `tribunalcommercecotonou.bj` renvoie désormais vers un site de paris en ligne : le portail officiel est `tcc.justice.bj` (ce dépôt ne cite pas l'ancien domaine).
+

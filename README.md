@@ -46,7 +46,20 @@ year from 2006 through the current year. No unpublished checksum is guessed.
 Format validation never makes HTTP requests and does not establish existence.
 
 `TaxpayerType` has five cases: `Individual` (digits 0, 1 or 2), `Company` (3),
-`PublicEntity` (4), `InternationalOrganization` (5) and `Ngo` (6).
+`PublicEntity` (4), `InternationalOrganization` (5) and `Ngo` (6). It reflects
+the status digit the DGI assigned; the DGI applies it loosely (some
+municipalities hold IFUs starting with 4, 5 or 6), so do not treat it as proof
+of the entity's legal type.
+
+A well-formed IFU is not necessarily active: since September 2026 the DGI can
+deactivate an IFU, and this package cannot detect it.
+
+Legacy local RCCM numbers issued before the `RB/...` format (for example
+`14.727-B`), which some official documents still quote, are rejected.
+
+These rules were checked against the law and official practice in force on
+22 October 2026 (Code général des impôts 2026, OHADA Uniform Act of
+15 December 2010, the official APIEx register).
 
 ## Check existence
 
