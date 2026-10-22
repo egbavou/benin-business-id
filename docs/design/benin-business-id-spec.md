@@ -271,9 +271,9 @@ Enum adossé à des chaînes :
 
 `RccmCheckResult` porte en outre `public ?\Throwable $failure` (D36) : l'exception d'origine quand le statut est `Unavailable` à la suite d'une erreur (causes `Transport`, `HttpStatus`, `InvalidJson`, `Schema`). Il vaut `null` dans tous les autres cas, y compris `Disabled`. Pour `HttpStatus`, ou pour un schéma refusé sans exception d'origine, c'est l'exception interne qui décrit la panne.
 
-`IfuCheckResult` porte lui aussi `public ?UnavailableReason $unavailableReason` (D31, décision du 21/10/2026, harmonisée avec `vat-number`). Il vaut `null` sauf quand le statut est `Unavailable`. `IfuChecker` le renseigne avec `UnavailableReason::NoSource` pour tout IFU valide. Le cas `NoSource` n'est jamais produit par `RccmChecker`.
+`IfuCheckResult` porte lui aussi `public ?UnavailableReason $unavailableReason` (D31, décision du 21/10/2026, harmonisée avec `vat-validator`). Il vaut `null` sauf quand le statut est `Unavailable`. `IfuChecker` le renseigne avec `UnavailableReason::NoSource` pour tout IFU valide. Le cas `NoSource` n'est jamais produit par `RccmChecker`.
 
-Pas d'équivalent de `registryErrorCode` (présent dans `vat-number`) : l'annuaire APIEx ne renvoie pas de codes d'erreur métier, et ses erreurs HTTP relèvent de `HttpStatus`.
+Pas d'équivalent de `registryErrorCode` (présent dans `vat-validator`) : l'annuaire APIEx ne renvoie pas de codes d'erreur métier, et ses erreurs HTTP relèvent de `HttpStatus`.
 
 ---
 
