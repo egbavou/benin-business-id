@@ -314,7 +314,7 @@ Il suit le parcours du §3.5 de la recherche.
 
 ```
 GET {url}?page=1&page_size=50&filters={json}
-User-Agent: egbavou/benin-business-id
+User-Agent: egbavou/benin-business-id (+https://github.com/egbavou/benin-business-id)
 Accept: application/json
 ```
 

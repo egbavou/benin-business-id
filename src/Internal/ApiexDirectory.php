@@ -23,6 +23,8 @@ final class ApiexDirectory
 
     public const ESTABLISHMENTS_FIELD_ID = 141;
 
+    private const USER_AGENT = 'egbavou/benin-business-id (+https://github.com/egbavou/benin-business-id)';
+
     public function __construct(
         private readonly ClientInterface $httpClient,
         private readonly RequestFactoryInterface $requestFactory,
@@ -38,7 +40,7 @@ final class ApiexDirectory
                 'filters' => json_encode($this->filters($register, $rccm, $exact), JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
             ], '', '&', PHP_QUERY_RFC3986);
             $request = $this->requestFactory->createRequest('GET', $url.(str_contains($url, '?') ? '&' : '?').$query)
-                ->withHeader('User-Agent', 'egbavou/benin-business-id')
+                ->withHeader('User-Agent', self::USER_AGENT)
                 ->withHeader('Accept', 'application/json');
             $response = $this->httpClient->sendRequest($request);
         } catch (Throwable $exception) {

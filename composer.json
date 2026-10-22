@@ -3,6 +3,7 @@
     "description": "Offline Beninese IFU and RCCM validation with optional APIEx directory checks.",
     "type": "library",
     "license": "MIT",
+    "homepage": "https://github.com/egbavou/benin-business-id",
     "require": {
         "php": "^8.3",
         "psr/http-client": "^1.0",
@@ -65,5 +66,9 @@
         {
             "name": "Egbavou"
         }
-    ]
+    ],
+    "support": {
+        "issues": "https://github.com/egbavou/benin-business-id/issues",
+        "source": "https://github.com/egbavou/benin-business-id"
+    }
 }

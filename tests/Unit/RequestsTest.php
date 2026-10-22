@@ -13,7 +13,7 @@ it('sends the exact expected equality and delimited contains filters', function 
     Assert::assertCount(4, $client->requests);
     foreach ($client->requests as $index => $request) {
         Assert::assertSame('GET', $request->getMethod());
-        Assert::assertSame('egbavou/benin-business-id', $request->getHeaderLine('User-Agent'));
+        Assert::assertSame('egbavou/benin-business-id (+https://github.com/egbavou/benin-business-id)', $request->getHeaderLine('User-Agent'));
         Assert::assertSame('application/json', $request->getHeaderLine('Accept'));
         parse_str($request->getUri()->getQuery(), $query);
         Assert::assertSame('1', $query['page']);
