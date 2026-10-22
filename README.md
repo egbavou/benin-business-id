@@ -8,7 +8,7 @@ RCCM existence checks and Laravel 12/13 validation rules. Requires PHP 8.3+.
 ```sh
 composer require egbavou/benin-business-id
 # For the Laravel checkers or the HTTP example below:
-composer require guzzlehttp/guzzle:^7.8
+composer require "guzzlehttp/guzzle:^7.8"
 ```
 
 The core works without Laravel. HTTP clients and request factories use PSR-18
@@ -36,12 +36,17 @@ $rccm->sequenceNumber;       // 1432
 ```
 
 `from()` throws `InvalidIdentifierException` with a `FailureReason` in `reason`.
+`FailureReason` values are the translation keys under `validation.ifu` or
+`validation.rccm` (for example, `invalid_characters` and `invalid_year`).
 `format()` and string conversion return the normalized value. Spaces (including
 Unicode spaces), dots and hyphens are removed. Prefixes, annotations and full
 city names are rejected. RCCM year spelling and sequence leading zeros are
 preserved. IFUs require 13 digits, a type digit from 0 to 6 and a registration
 year from 2006 through the current year. No unpublished checksum is guessed.
 Format validation never makes HTTP requests and does not establish existence.
+
+`TaxpayerType` has five cases: `Individual` (digits 0, 1 or 2), `Company` (3),
+`PublicEntity` (4), `InternationalOrganization` (5) and `Ngo` (6).
 
 ## Check existence
 
@@ -62,12 +67,14 @@ $result->input;     // Original input (or the value of an input value object)
 $result->rccm;      // Parsed identifier; null for InvalidFormat
 $result->checkedAt; // UTC DateTimeImmutable
 $result->unavailableReason; // UnavailableReason enum; null unless Unavailable
+$result->failure;           // Original Throwable for technical failures; null otherwise
 
 $ifuResult = (new IfuChecker)->check('3202444139959'); // Unavailable
 $ifuResult->unavailableReason; // UnavailableReason::NoSource
 ```
 
-RCCM verification is **disabled by default**, including outside Laravel. A found
+RCCM verification is **disabled by default**, including outside Laravel.
+`RccmChecker::isEnabled()` reports whether online verification is enabled. A found
 result exposes nullable `name`, `tradeName`, `creationDate`, `municipality`,
 `district`, `phone`, `email`, `mainActivity`, `formerNumber` and `register`
 (`RccmRegister::Companies` or `Establishments`). Companies-register results are
@@ -91,11 +98,19 @@ production use.
 | `Transport` | `transport` | Failure before a response is received, including request construction. |
 | `HttpStatus` | `http_status` | The server returned a status other than 200. |
 | `InvalidJson` | `invalid_json` | The response body cannot be decoded as JSON. |
-| `Schema` | `schema` | Unexpected JSON shape, incomplete results with no match, or an error after decoding a 200 response. |
+| `Schema` | `schema` | Unexpected JSON shape, incomplete results with no match, or any other error after a 200 response is received. |
 
 The enum is `Egbavou\BeninBusinessId\UnavailableReason`. It is null for `Found`,
 `NotFound` and `InvalidFormat`. Valid IFUs always return `NoSource`; RCCM results
 never use this reason.
+
+`RccmCheckResult::failure` holds the original `Throwable` for `Transport`,
+`InvalidJson` and processing errors classified as `Schema`. For `HttpStatus`
+and schema rejections without an original exception, it holds an internal
+`DirectoryException` with a clear English message (for example,
+`APIEx returned HTTP 503.`). Package-generated exception messages do not include
+response bodies or personal data. `failure` is null for `Found`, `NotFound`,
+`InvalidFormat` and `Disabled`.
 
 An existence check makes up to **4 sequential requests**, so the worst case is
 about **4 × the configured timeout**. A `NotFound` or category-A check typically

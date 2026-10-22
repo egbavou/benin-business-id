@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Egbavou\BeninBusinessId;
 
+use Egbavou\BeninBusinessId\Internal\IdentifierCleanup;
 use Stringable;
 
 final readonly class Ifu implements Stringable
@@ -30,7 +31,7 @@ final readonly class Ifu implements Stringable
 
     public static function from(string $input): self
     {
-        $value = preg_replace('/[\s\p{Zs}.\-]+/u', '', $input);
+        $value = preg_replace(IdentifierCleanup::PATTERN, '', $input);
 
         if ($value === null || preg_match('/[^0-9]/', $value) === 1) {
             throw new InvalidIdentifierException(FailureReason::InvalidCharacters, 'IFU');
@@ -43,7 +44,7 @@ final readonly class Ifu implements Stringable
         $type = TaxpayerType::fromDigit((int) $value[0]);
         $year = (int) substr($value, 1, 4);
 
-        if ($year < 2006 || $year > (int) date('Y')) {
+        if ($year < 2006 || $year > (int) gmdate('Y')) {
             throw new InvalidIdentifierException(FailureReason::InvalidYear, 'IFU');
         }
 

@@ -35,7 +35,7 @@ it('rejects invalid RCCMs in the specified check order', function (string $input
 
 it('accepts all active registries and all former registries through 2020', function (): void {
     foreach (['COT', 'ABC', 'PNO', 'PKO', 'ABY', 'LKS', 'NAT', 'DGO', 'KDI', 'APL', 'SVL'] as $registry) {
-        Assert::assertTrue(Rccm::isValid('RB/'.$registry.'/'.date('y').' B 0'));
+        Assert::assertTrue(Rccm::isValid('RB/'.$registry.'/'.gmdate('y').' B 0'));
     }
     foreach (['PN', 'PK', 'ODH', 'POB', 'ALD'] as $registry) {
         Assert::assertTrue(Rccm::isValid('RB/'.$registry.'/2020 B 000000'));
@@ -44,9 +44,9 @@ it('accepts all active registries and all former registries through 2020', funct
 });
 
 it('applies the dynamic century pivot and the four digit year boundaries', function (): void {
-    $current = (int) date('Y');
+    $current = (int) gmdate('Y');
     $next = ($current + 1) % 100;
-    Assert::assertSame($current, Rccm::from('RB/COT/'.date('y').' B 1')->year);
+    Assert::assertSame($current, Rccm::from('RB/COT/'.gmdate('y').' B 1')->year);
     $previousCentury = 1900 + $next;
     $input = 'RB/COT/'.sprintf('%02d', $next).' B 1';
     if ($previousCentury < 1990) {

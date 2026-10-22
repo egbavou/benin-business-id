@@ -41,10 +41,10 @@ it('builds the checker with the configured switch URLs and timeout', function ()
     $config->set('benin-business-id.rccm.apiex.establishments_url', 'https://example.test/establishments');
     $checker = app(RccmChecker::class);
     Assert::assertTrue($checker->isEnabled());
-    Assert::assertSame('https://example.test/companies', (new ReflectionProperty($checker, 'companiesUrl'))->getValue($checker));
-    Assert::assertSame('https://example.test/establishments', (new ReflectionProperty($checker, 'establishmentsUrl'))->getValue($checker));
     $directory = (new ReflectionProperty($checker, 'directory'))->getValue($checker);
     Assert::assertInstanceOf(ApiexDirectory::class, $directory);
+    Assert::assertSame('https://example.test/companies', (new ReflectionProperty($directory, 'companiesUrl'))->getValue($directory));
+    Assert::assertSame('https://example.test/establishments', (new ReflectionProperty($directory, 'establishmentsUrl'))->getValue($directory));
     $client = (new ReflectionProperty($directory, 'httpClient'))->getValue($directory);
     Assert::assertInstanceOf(Client::class, $client);
     Assert::assertSame(3.0, $client->getConfig('timeout'));
@@ -75,8 +75,10 @@ it('falls back to the default URLs for empty or non-string configuration', funct
     $config->set('benin-business-id.rccm.apiex.establishments_url', $url);
 
     $checker = app(RccmChecker::class);
-    Assert::assertSame(RccmChecker::DEFAULT_COMPANIES_URL, (new ReflectionProperty($checker, 'companiesUrl'))->getValue($checker));
-    Assert::assertSame(RccmChecker::DEFAULT_ESTABLISHMENTS_URL, (new ReflectionProperty($checker, 'establishmentsUrl'))->getValue($checker));
+    $directory = (new ReflectionProperty($checker, 'directory'))->getValue($checker);
+    Assert::assertInstanceOf(ApiexDirectory::class, $directory);
+    Assert::assertSame(RccmChecker::DEFAULT_COMPANIES_URL, (new ReflectionProperty($directory, 'companiesUrl'))->getValue($directory));
+    Assert::assertSame(RccmChecker::DEFAULT_ESTABLISHMENTS_URL, (new ReflectionProperty($directory, 'establishmentsUrl'))->getValue($directory));
 })->with([[null], [''], [false], [123]]);
 
 it('normalizes the configured timeout', function (mixed $timeout, float $expected): void {

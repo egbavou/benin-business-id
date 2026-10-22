@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Egbavou\BeninBusinessId;
 
 use DateTimeImmutable;
+use Throwable;
 
 final readonly class RccmCheckResult
 {
@@ -25,5 +26,6 @@ final readonly class RccmCheckResult
         public ?string $formerNumber = null,
         public ?RccmRegister $register = null,
         public ?UnavailableReason $unavailableReason = null,
+        public ?Throwable $failure = null,
     ) {}
 }

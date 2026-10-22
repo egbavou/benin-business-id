@@ -269,6 +269,8 @@ Enum adossé à des chaînes :
 | `InvalidJson` | `invalid_json` | corps qui n'est pas du JSON |
 | `Schema` | `schema` | JSON inattendu (`count`, `results`, `Numéro RC`), `count` supérieur au nombre de lignes reçues sans correspondance trouvée, ou toute erreur levée après le décodage d'une réponse 200 |
 
+`RccmCheckResult` porte en outre `public ?\Throwable $failure` (D36) : l'exception d'origine quand le statut est `Unavailable` à la suite d'une erreur (causes `Transport`, `HttpStatus`, `InvalidJson`, `Schema`). Il vaut `null` dans tous les autres cas, y compris `Disabled`. Pour `HttpStatus`, ou pour un schéma refusé sans exception d'origine, c'est l'exception interne qui décrit la panne.
+
 `IfuCheckResult` porte lui aussi `public ?UnavailableReason $unavailableReason` (D31, décision du 21/10/2026, harmonisée avec `vat-number`). Il vaut `null` sauf quand le statut est `Unavailable`. `IfuChecker` le renseigne avec `UnavailableReason::NoSource` pour tout IFU valide. Le cas `NoSource` n'est jamais produit par `RccmChecker`.
 
 Pas d'équivalent de `registryErrorCode` (présent dans `vat-number`) : l'annuaire APIEx ne renvoie pas de codes d'erreur métier, et ses erreurs HTTP relèvent de `HttpStatus`.
@@ -354,8 +356,8 @@ Une valeur que `Rccm::tryFrom` refuse ne correspond jamais.
 ### 8.5 `formerNumber`
 
 - Lu dans la partie entre parenthèses de `Numéro RC`.
-- Motif insensible à la casse : `\(\s*ancien\s*n\s*[°o]?\s*(?:rccm)?\s*:?\s*(.+?)\s*\)`.
-- Valeur : le groupe 1, débarrassé des espaces en bordure.
+- Motif insensible à la casse : `\(\s*ancien\s*n(?:um[ée]ro|\s*[°o])?\s*(?:rccm)?\s*:?\s*(.+?)\s*\)` (D33 : reconnaît aussi « Ancien numéro »).
+- Valeur : le groupe 1, débarrassé des espaces en bordure ; `null` si le résultat est vide (D33).
 - Exemples réels :
   - `(Ancien n°: 02 B 1545)` donne `02 B 1545` ;
   - `(ANCIEN N° : 21.130 B)` donne `21.130 B` ;
@@ -415,6 +417,8 @@ return [
 ```
 
 ### 10.3 Règles, toutes dans `Egbavou\BeninBusinessId\Laravel\Rules\`
+
+Le code commun (refus des non-chaînes, appel à `from()`, traduction, option stricte) est porté par une classe de base abstraite `@internal` (D34). Les quatre règles publiques restent `final`.
 
 Elles implémentent `Illuminate\Contracts\Validation\ValidationRule`.
 - **Valeur non-chaîne** : échec avec la clé `<id>.invalid_characters`.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Egbavou\BeninBusinessId;
 
+use Egbavou\BeninBusinessId\Internal\IdentifierCleanup;
 use Stringable;
 
 final readonly class Rccm implements Stringable
@@ -11,6 +12,8 @@ final readonly class Rccm implements Stringable
     private const ACTIVE_REGISTRIES = ['COT', 'ABC', 'PNO', 'PKO', 'ABY', 'LKS', 'NAT', 'DGO', 'KDI', 'APL', 'SVL'];
 
     private const FORMER_REGISTRIES = ['PN', 'PK', 'ODH', 'POB', 'ALD'];
+
+    private const CATEGORIES = ['A', 'B', 'C', 'D', 'E'];
 
     private function __construct(
         public string $value,
@@ -36,10 +39,14 @@ final readonly class Rccm implements Stringable
 
     public static function from(string $input): self
     {
-        $cleaned = preg_replace('/[\s\p{Zs}.\-]+/u', '', $input);
-        $value = strtoupper($cleaned ?? '');
+        $cleaned = preg_replace(IdentifierCleanup::PATTERN, '', $input);
+        if ($cleaned === null) {
+            throw new InvalidIdentifierException(FailureReason::InvalidCharacters, 'RCCM');
+        }
 
-        if ($cleaned === null || preg_match('/[^A-Z0-9\/]/', $value) === 1) {
+        $value = strtoupper($cleaned);
+
+        if (preg_match('/[^A-Z0-9\/]/', $value) === 1) {
             throw new InvalidIdentifierException(FailureReason::InvalidCharacters, 'RCCM');
         }
 
@@ -67,16 +74,16 @@ final readonly class Rccm implements Stringable
             throw new InvalidIdentifierException(FailureReason::UnknownRegistry, 'RCCM');
         }
 
-        if (! in_array($category, ['A', 'B', 'C', 'D', 'E'], true)) {
+        if (! in_array($category, self::CATEGORIES, true)) {
             throw new InvalidIdentifierException(FailureReason::UnknownCategory, 'RCCM');
         }
 
-        $currentYear = (int) date('Y');
+        $currentYear = (int) gmdate('Y');
         $year = (int) $yearInput;
 
         if (strlen($yearInput) === 2) {
             $year += $year > $currentYear % 100 ? 1900 : 2000;
-        } elseif ($year < 1990 || $year > 2020) {
+        } elseif ($year > 2020) {
             throw new InvalidIdentifierException(FailureReason::InvalidYear, 'RCCM');
         }
 

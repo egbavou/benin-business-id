@@ -10,7 +10,6 @@ use Egbavou\BeninBusinessId\Rccm;
 use Egbavou\BeninBusinessId\RccmRegister;
 use Egbavou\BeninBusinessId\UnavailableReason;
 use JsonException;
-use LogicException;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use stdClass;
@@ -28,10 +27,27 @@ final class ApiexDirectory
     public function __construct(
         private readonly ClientInterface $httpClient,
         private readonly RequestFactoryInterface $requestFactory,
+        private readonly string $companiesUrl,
+        private readonly string $establishmentsUrl,
     ) {}
 
-    /** @return list<stdClass> */
-    public function records(string $url, RccmRegister $register, Rccm $rccm, bool $exact): array
+    public function find(RccmRegister $register, Rccm $rccm): ?stdClass
+    {
+        $url = $register === RccmRegister::Companies ? $this->companiesUrl : $this->establishmentsUrl;
+
+        // Search exact forms first, then delimited contains forms for annotated numbers.
+        foreach ([true, false] as $exact) {
+            $record = $this->matchingRecord($url, $register, $rccm, $exact);
+
+            if ($record !== null) {
+                return $record;
+            }
+        }
+
+        return null;
+    }
+
+    private function matchingRecord(string $url, RccmRegister $register, Rccm $rccm, bool $exact): ?stdClass
     {
         try {
             $query = http_build_query([
@@ -47,8 +63,10 @@ final class ApiexDirectory
             throw new DirectoryException(UnavailableReason::Transport, $exception);
         }
 
-        if ($response->getStatusCode() !== 200) {
-            throw new DirectoryException(UnavailableReason::HttpStatus);
+        $status = $response->getStatusCode();
+
+        if ($status !== 200) {
+            throw new DirectoryException(UnavailableReason::HttpStatus, message: 'APIEx returned HTTP '.$status.'.');
         }
 
         try {
@@ -62,33 +80,54 @@ final class ApiexDirectory
             throw new DirectoryException(UnavailableReason::Schema);
         }
 
-        $records = [];
+        $match = null;
 
         foreach ($body->results as $record) {
             if (! $record instanceof stdClass || ! property_exists($record, 'Numéro RC')) {
                 throw new DirectoryException(UnavailableReason::Schema);
             }
 
-            $records[] = $record;
-        }
-
-        if ($body->count > count($records)) {
-            foreach ($records as $record) {
-                if (self::matches($record, $rccm)) {
-                    return $records;
-                }
+            if ($match === null && self::matches($record, $rccm)) {
+                $match = $record;
             }
-
-            throw new DirectoryException(UnavailableReason::Schema);
         }
 
-        return $records;
+        if ($match === null && $body->count > count($body->results)) {
+            throw new DirectoryException(UnavailableReason::Schema, message: 'APIEx returned an incomplete results page without a matching record.');
+        }
+
+        return $match;
+    }
+
+    /**
+     * @return array{
+     *     name: ?string, tradeName: ?string, creationDate: ?DateTimeImmutable,
+     *     municipality: ?string, district: ?string, phone: ?string, email: ?string,
+     *     mainActivity: ?string, formerNumber: ?string, register: RccmRegister
+     * }
+     */
+    public function details(stdClass $record, RccmRegister $register): array
+    {
+        $company = $register === RccmRegister::Companies;
+
+        return [
+            'name' => $company ? self::text($record, 'Dénomination') : null,
+            'tradeName' => self::text($record, 'Nom commercial'),
+            'creationDate' => self::creationDate($record, $company ? 'Date création' : 'Date de création'),
+            'municipality' => self::text($record, 'Commune'),
+            'district' => self::text($record, 'Quartier'),
+            'phone' => $company ? self::text($record, 'Téléphone') : null,
+            'email' => $company ? self::text($record, 'Email') : null,
+            'mainActivity' => $company ? null : self::text($record, 'Activité principale'),
+            'formerNumber' => self::formerNumber($record),
+            'register' => $register,
+        ];
     }
 
     /** @return list<array{gate: string, type: string, field_id: int, logic: string, value: string}> */
-    public function filters(RccmRegister $register, Rccm $rccm, bool $exact): array
+    private function filters(RccmRegister $register, Rccm $rccm, bool $exact): array
     {
-        $yearInput = self::typedYear($rccm);
+        $yearInput = explode(' ', explode('/', $rccm->value)[2], 2)[0];
         $years = [$yearInput];
 
         if ($rccm->year <= 2020) {
@@ -130,7 +169,7 @@ final class ApiexDirectory
         return $filters;
     }
 
-    public static function matches(stdClass $record, Rccm $rccm): bool
+    private static function matches(stdClass $record, Rccm $rccm): bool
     {
         $raw = self::text($record, 'Numéro RC');
         $candidate = $raw === null ? null : Rccm::tryFrom(explode('(', $raw, 2)[0]);
@@ -142,7 +181,7 @@ final class ApiexDirectory
             && self::sequenceKey($candidate) === self::sequenceKey($rccm);
     }
 
-    public static function text(stdClass $record, string $field): ?string
+    private static function text(stdClass $record, string $field): ?string
     {
         $value = $record->{$field} ?? null;
 
@@ -159,7 +198,7 @@ final class ApiexDirectory
         return $value !== '' ? $value : null;
     }
 
-    public static function creationDate(stdClass $record, string $field): ?DateTimeImmutable
+    private static function creationDate(stdClass $record, string $field): ?DateTimeImmutable
     {
         $value = self::text($record, $field);
 
@@ -172,24 +211,17 @@ final class ApiexDirectory
         return $date !== false && $date->format('Y-m-d') === $value ? $date : null;
     }
 
-    public static function formerNumber(stdClass $record): ?string
+    private static function formerNumber(stdClass $record): ?string
     {
         $raw = self::text($record, 'Numéro RC');
 
-        if ($raw === null || preg_match('/\(\s*ancien\s*n\s*[°o]?\s*(?:rccm)?\s*:?\s*(.+?)\s*\)/iu', $raw, $parts) !== 1) {
+        if ($raw === null || preg_match('/\(\s*ancien\s*n(?:um[ée]ro|\s*[°o])?\s*(?:rccm)?\s*:?\s*(.+?)\s*\)/iu', $raw, $parts) !== 1) {
             return null;
         }
 
-        return trim($parts[1]);
-    }
+        $former = trim($parts[1]);
 
-    private static function typedYear(Rccm $rccm): string
-    {
-        if (preg_match('#^RB/[A-Z]{2,3}/(\d{2}|\d{4}) #', $rccm->value, $parts) !== 1) {
-            throw new LogicException('Unexpected normalized RCCM value.');
-        }
-
-        return $parts[1];
+        return $former === '' ? null : $former;
     }
 
     private static function sequenceKey(Rccm $rccm): string

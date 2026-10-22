@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Egbavou\BeninBusinessId\CheckStatus;
 use Egbavou\BeninBusinessId\Ifu;
 use Egbavou\BeninBusinessId\IfuChecker;
+use Egbavou\BeninBusinessId\Internal\DirectoryException;
 use Egbavou\BeninBusinessId\Rccm;
 use Egbavou\BeninBusinessId\RccmChecker;
 use Egbavou\BeninBusinessId\RccmRegister;
@@ -27,6 +28,7 @@ it('validates before checking the disabled switch without making requests', func
         Assert::assertSame(CheckStatus::InvalidFormat, $result->status);
         Assert::assertNull($result->rccm);
         Assert::assertNull($result->unavailableReason);
+        Assert::assertNull($result->failure);
         Assert::assertSame('bad input', $result->input);
     }
     $checker = new RccmChecker($client, new HttpFactory);
@@ -34,6 +36,7 @@ it('validates before checking the disabled switch without making requests', func
     $result = $checker->check(' rb/cot/18-B-22272 ');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame(UnavailableReason::Disabled, $result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame(' rb/cot/18-B-22272 ', $result->input);
     Assert::assertNotNull($result->rccm);
     Assert::assertSame('UTC', $result->checkedAt->getTimezone()->getName());
@@ -56,6 +59,7 @@ it('maps all company fields from the first exact request', function (): void {
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check($identifier);
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame($identifier, $result->rccm);
     Assert::assertSame($identifier->value, $result->input);
     Assert::assertSame('Example Company', $result->name);
@@ -73,7 +77,7 @@ it('maps all company fields from the first exact request', function (): void {
     Assert::assertCount(1, $client->requests);
 });
 
-it('extracts each specified former number after the contains request', function (string $annotation, string $former): void {
+it('extracts each specified former number after the contains request', function (string $annotation, ?string $former): void {
     $client = new FakeHttpClient([
         FakeHttpClient::json(),
         FakeHttpClient::json([['Numéro RC' => 'RB/COT/07 B 2058 '.$annotation]]),
@@ -81,10 +85,13 @@ it('extracts each specified former number after the contains request', function 
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/07 B 2058');
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame($former, $result->formerNumber);
     Assert::assertCount(2, $client->requests);
 })->with([
     ['(Ancien n°: 02 B 1545)', '02 B 1545'],
+    ['(Ancien n°: )', null],
+    ['(Ancien numéro: 02 B 1545)', '02 B 1545'],
     ['(ANCIEN N° : 21.130 B)', '21.130 B'],
     ['(Ancien no: RB/PK/11 B 059)', 'RB/PK/11 B 059'],
     ['(Ancien n°RCCM RB/PNO/05 B 146)', 'RB/PNO/05 B 146'],
@@ -103,6 +110,7 @@ it('compares the entire identifier rather than matching a prefix', function (): 
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 2227');
     Assert::assertSame(CheckStatus::NotFound, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertCount(4, $client->requests);
     foreach (['name', 'tradeName', 'creationDate', 'municipality', 'district', 'phone', 'email', 'mainActivity', 'formerNumber', 'register'] as $field) {
         Assert::assertNull($result->{$field});
@@ -114,6 +122,7 @@ it('compares equivalent year forms and sequence numbers', function (string $inpu
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check($input);
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame($input, $result->rccm?->value);
 })->with([
     ['RB/ABC/12 B 180', 'RB/ABC/2012 B 180'],
@@ -139,6 +148,7 @@ it('searches establishments first for category A and never exposes personal fiel
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/PKO/23 A 18689');
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame(RccmRegister::Establishments, $result->register);
     Assert::assertStringContainsString('gdb.monentreprise.bj', (string) $client->requests[0]->getUri());
     Assert::assertSame('Example Establishment', $result->tradeName);
@@ -161,6 +171,7 @@ it('falls back to the other register in the specified order', function (string $
     $result = (new RccmChecker($client, new HttpFactory, enabled: true, companiesUrl: 'https://example.test/companies', establishmentsUrl: 'https://example.test/establishments'))->check($number);
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     $first = $category === 'A' ? '/establishments' : '/companies';
     $last = $category === 'A' ? '/companies' : '/establishments';
     Assert::assertSame($first, $client->requests[0]->getUri()->getPath());
@@ -173,6 +184,22 @@ it('returns unavailable immediately for technical and schema failures', function
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame($reason, $result->unavailableReason);
+    Assert::assertNotNull($result->failure);
+
+    if ($response instanceof Throwable) {
+        Assert::assertSame($response, $result->failure);
+    } elseif ($reason === UnavailableReason::InvalidJson) {
+        Assert::assertInstanceOf(JsonException::class, $result->failure);
+        Assert::assertSame('Syntax error', $result->failure->getMessage());
+    } else {
+        Assert::assertInstanceOf(DirectoryException::class, $result->failure);
+        Assert::assertSame($reason, $result->failure->reason);
+        Assert::assertSame($reason === UnavailableReason::HttpStatus
+            ? 'APIEx returned HTTP '.$response->getStatusCode().'.'
+            : 'APIEx returned an unexpected response schema.', $result->failure->getMessage());
+        Assert::assertNull($result->failure->getPrevious());
+    }
+
     Assert::assertNotNull($result->rccm);
     Assert::assertNull($result->register);
     Assert::assertNull($result->name);
@@ -180,7 +207,8 @@ it('returns unavailable immediately for technical and schema failures', function
 })->with([
     'PSR-18 exception' => [new class('Fake transport failure.') extends RuntimeException implements ClientExceptionInterface {}, UnavailableReason::Transport],
     'unexpected runtime exception' => [new RuntimeException('Fake runtime failure.'), UnavailableReason::Transport],
-    'server error' => [new Response(500), UnavailableReason::HttpStatus],
+    'server error' => [new Response(500, [], 'Private response body sentinel'), UnavailableReason::HttpStatus],
+    'service unavailable' => [new Response(503), UnavailableReason::HttpStatus],
     'redirect' => [new Response(301), UnavailableReason::HttpStatus],
     'invalid JSON' => [new Response(200, [], '<html>Unavailable</html>'), UnavailableReason::InvalidJson],
     'missing results' => [new Response(200, [], '{"count":0}'), UnavailableReason::Schema],
@@ -196,10 +224,12 @@ it('returns unavailable immediately for technical and schema failures', function
 ]);
 
 it('returns transport unavailable for an internal PHP type error', function (): void {
-    $client = new FakeHttpClient([new TypeError('Fake PHP type error.')]);
+    $failure = new TypeError('Fake PHP type error.');
+    $client = new FakeHttpClient([$failure]);
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame(UnavailableReason::Transport, $result->unavailableReason);
+    Assert::assertSame($failure, $result->failure);
 });
 
 it('maps missing empty null and malformed optional fields to null', function (mixed $date): void {
@@ -214,6 +244,7 @@ it('maps missing empty null and malformed optional fields to null', function (mi
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertNull($result->name);
     Assert::assertNull($result->tradeName);
     Assert::assertNull($result->creationDate);
@@ -273,6 +304,7 @@ it('selects the exact record after several near misses', function (): void {
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame(RccmRegister::Companies, $result->register);
     Assert::assertSame('Matched Company', $result->name);
     Assert::assertSame('Matched Trade', $result->tradeName);
@@ -293,6 +325,12 @@ it('treats incomplete results as schema unavailable unless a row matches', funct
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame($expected, $result->status);
     Assert::assertSame($expected === CheckStatus::Unavailable ? UnavailableReason::Schema : null, $result->unavailableReason);
+    if ($expected === CheckStatus::Unavailable) {
+        Assert::assertInstanceOf(DirectoryException::class, $result->failure);
+        Assert::assertSame('APIEx returned an incomplete results page without a matching record.', $result->failure->getMessage());
+    } else {
+        Assert::assertNull($result->failure);
+    }
     Assert::assertCount(1, $client->requests);
 })->with([
     ['RB/COT/18 B 22273', CheckStatus::Unavailable],
@@ -304,6 +342,8 @@ it('returns schema unavailable for a nonempty count with no received rows', func
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame(UnavailableReason::Schema, $result->unavailableReason);
+    Assert::assertInstanceOf(DirectoryException::class, $result->failure);
+    Assert::assertSame('APIEx returned an incomplete results page without a matching record.', $result->failure->getMessage());
     Assert::assertCount(1, $client->requests);
 });
 
@@ -319,21 +359,30 @@ it('returns transport unavailable when the request factory rejects a URL', funct
     $result = (new RccmChecker($client, $factory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame(UnavailableReason::Transport, $result->unavailableReason);
+    Assert::assertInstanceOf(InvalidArgumentException::class, $result->failure);
+    Assert::assertSame('Rejected URL.', $result->failure->getMessage());
     Assert::assertSame([], $client->requests);
 });
 
 it('returns schema unavailable for unexpected errors after receiving a 200 response', function (): void {
-    $response = new class extends Response
+    $failure = new TypeError('Fake response processing failure.');
+    $response = new class($failure) extends Response
     {
+        public function __construct(private readonly Throwable $failure)
+        {
+            parent::__construct(200);
+        }
+
         public function getBody(): StreamInterface
         {
-            throw new TypeError('Fake response processing failure.');
+            throw $this->failure;
         }
     };
     $client = new FakeHttpClient([$response]);
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Unavailable, $result->status);
     Assert::assertSame(UnavailableReason::Schema, $result->unavailableReason);
+    Assert::assertSame($failure, $result->failure);
 });
 
 it('normalizes numeric and trimmed text fields including catalog values', function (mixed $raw, ?string $expected): void {
@@ -345,6 +394,7 @@ it('normalizes numeric and trimmed text fields including catalog values', functi
     $result = (new RccmChecker($client, new HttpFactory, enabled: true))->check('RB/COT/18 B 22272');
     Assert::assertSame(CheckStatus::Found, $result->status);
     Assert::assertNull($result->unavailableReason);
+    Assert::assertNull($result->failure);
     Assert::assertSame($expected, $result->name);
     Assert::assertSame($expected, $result->municipality);
 })->with([

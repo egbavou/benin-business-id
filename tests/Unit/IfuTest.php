@@ -33,7 +33,7 @@ it('rejects invalid IFUs in the specified check order', function (string $input,
 })->with(IdentifierCases::invalidIfu());
 
 it('accepts the IFU year boundaries without a checksum or sequence restriction', function (): void {
-    foreach ([2006, (int) date('Y')] as $year) {
+    foreach ([2006, (int) gmdate('Y')] as $year) {
         foreach (['00000000', '99999999'] as $tail) {
             Assert::assertTrue(Ifu::isValid('3'.$year.$tail));
         }

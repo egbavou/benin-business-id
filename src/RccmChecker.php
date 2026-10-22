@@ -13,22 +13,22 @@ use Psr\Http\Message\RequestFactoryInterface;
 use stdClass;
 use Throwable;
 
-final class RccmChecker
+final readonly class RccmChecker
 {
     public const DEFAULT_COMPANIES_URL = 'https://gdb.guichet.investbenin.bj/data-view/pm/latest/5';
 
     public const DEFAULT_ESTABLISHMENTS_URL = 'https://gdb.monentreprise.bj/data-view/registre%20pp/latest/310';
 
-    private readonly ApiexDirectory $directory;
+    private ApiexDirectory $directory;
 
     public function __construct(
         ClientInterface $httpClient,
         RequestFactoryInterface $requestFactory,
-        private readonly bool $enabled = false,
-        private readonly string $companiesUrl = self::DEFAULT_COMPANIES_URL,
-        private readonly string $establishmentsUrl = self::DEFAULT_ESTABLISHMENTS_URL,
+        private bool $enabled = false,
+        string $companiesUrl = self::DEFAULT_COMPANIES_URL,
+        string $establishmentsUrl = self::DEFAULT_ESTABLISHMENTS_URL,
     ) {
-        $this->directory = new ApiexDirectory($httpClient, $requestFactory);
+        $this->directory = new ApiexDirectory($httpClient, $requestFactory, $companiesUrl, $establishmentsUrl);
     }
 
     public function isEnabled(): bool
@@ -42,11 +42,11 @@ final class RccmChecker
         $identifier = $rccm instanceof Rccm ? $rccm : Rccm::tryFrom($rccm);
 
         if ($identifier === null) {
-            return $this->result(CheckStatus::InvalidFormat, $input, null);
+            return $this->statusResult(CheckStatus::InvalidFormat, $input, null);
         }
 
         if (! $this->enabled) {
-            return $this->result(CheckStatus::Unavailable, $input, $identifier, unavailableReason: UnavailableReason::Disabled);
+            return $this->statusResult(CheckStatus::Unavailable, $input, $identifier, unavailableReason: UnavailableReason::Disabled);
         }
 
         $registers = $identifier->category === 'A'
@@ -55,50 +55,47 @@ final class RccmChecker
 
         try {
             foreach ($registers as $register) {
-                $url = $register === RccmRegister::Companies ? $this->companiesUrl : $this->establishmentsUrl;
+                $record = $this->directory->find($register, $identifier);
 
-                foreach ([true, false] as $exact) {
-                    foreach ($this->directory->records($url, $register, $identifier, $exact) as $record) {
-                        if (ApiexDirectory::matches($record, $identifier)) {
-                            return $this->result(CheckStatus::Found, $input, $identifier, $record, $register);
-                        }
-                    }
+                if ($record !== null) {
+                    return $this->foundResult($input, $identifier, $record, $register);
                 }
             }
         } catch (DirectoryException $exception) {
-            return $this->result(CheckStatus::Unavailable, $input, $identifier, unavailableReason: $exception->reason);
-        } catch (Throwable) {
-            return $this->result(CheckStatus::Unavailable, $input, $identifier, unavailableReason: UnavailableReason::Schema);
+            return $this->statusResult(CheckStatus::Unavailable, $input, $identifier,
+                unavailableReason: $exception->reason,
+                failure: $exception->getPrevious() ?? $exception,
+            );
+        } catch (Throwable $exception) {
+            return $this->statusResult(CheckStatus::Unavailable, $input, $identifier,
+                unavailableReason: UnavailableReason::Schema,
+                failure: $exception,
+            );
         }
 
-        return $this->result(CheckStatus::NotFound, $input, $identifier);
+        return $this->statusResult(CheckStatus::NotFound, $input, $identifier);
     }
 
-    private function result(CheckStatus $status, string $input, ?Rccm $rccm, ?stdClass $record = null, ?RccmRegister $register = null, ?UnavailableReason $unavailableReason = null): RccmCheckResult
+    private function statusResult(CheckStatus $status, string $input, ?Rccm $rccm, ?UnavailableReason $unavailableReason = null, ?Throwable $failure = null): RccmCheckResult
     {
-        $checkedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
-
-        if ($status !== CheckStatus::Found || $record === null) {
-            return new RccmCheckResult($status, $checkedAt, $input, $rccm, unavailableReason: $unavailableReason);
-        }
-
-        $company = $register === RccmRegister::Companies;
-
         return new RccmCheckResult(
             status: $status,
-            checkedAt: $checkedAt,
+            checkedAt: new DateTimeImmutable('now', new DateTimeZone('UTC')),
             input: $input,
             rccm: $rccm,
-            name: $company ? ApiexDirectory::text($record, 'Dénomination') : null,
-            tradeName: ApiexDirectory::text($record, 'Nom commercial'),
-            creationDate: ApiexDirectory::creationDate($record, $company ? 'Date création' : 'Date de création'),
-            municipality: ApiexDirectory::text($record, 'Commune'),
-            district: ApiexDirectory::text($record, 'Quartier'),
-            phone: $company ? ApiexDirectory::text($record, 'Téléphone') : null,
-            email: $company ? ApiexDirectory::text($record, 'Email') : null,
-            mainActivity: $company ? null : ApiexDirectory::text($record, 'Activité principale'),
-            formerNumber: ApiexDirectory::formerNumber($record),
-            register: $register,
+            unavailableReason: $unavailableReason,
+            failure: $failure,
+        );
+    }
+
+    private function foundResult(string $input, Rccm $rccm, stdClass $record, RccmRegister $register): RccmCheckResult
+    {
+        return new RccmCheckResult(
+            CheckStatus::Found,
+            new DateTimeImmutable('now', new DateTimeZone('UTC')),
+            $input,
+            $rccm,
+            ...$this->directory->details($record, $register),
         );
     }
 }

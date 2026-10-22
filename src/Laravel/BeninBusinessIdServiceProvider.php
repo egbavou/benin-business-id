@@ -14,6 +14,8 @@ use Illuminate\Support\ServiceProvider;
 
 final class BeninBusinessIdServiceProvider extends ServiceProvider
 {
+    private const DEFAULT_TIMEOUT = 10.0;
+
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../../config/benin-business-id.php', 'benin-business-id');
@@ -25,7 +27,7 @@ final class BeninBusinessIdServiceProvider extends ServiceProvider
             $establishmentsUrl = $config->get('benin-business-id.rccm.apiex.establishments_url');
 
             return new RccmChecker(
-                new Client(['timeout' => is_numeric($timeout) && (float) $timeout > 0 ? (float) $timeout : 10.0]),
+                new Client(['timeout' => is_numeric($timeout) && (float) $timeout > 0 ? (float) $timeout : self::DEFAULT_TIMEOUT]),
                 new HttpFactory,
                 enabled: filter_var($config->get('benin-business-id.rccm.apiex.enabled'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? false,
                 companiesUrl: is_string($companiesUrl) && $companiesUrl !== '' ? $companiesUrl : RccmChecker::DEFAULT_COMPANIES_URL,

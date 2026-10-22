@@ -42,7 +42,7 @@ final class IdentifierCases
             ['9999900000001', FailureReason::UnknownTaxpayerType],
             ['5200081145006', FailureReason::InvalidYear],
             ['2977421186134', FailureReason::InvalidYear],
-            ['3'.((int) date('Y') + 1).'00000000', FailureReason::InvalidYear],
+            ['3'.((int) gmdate('Y') + 1).'00000000', FailureReason::InvalidYear],
             ['3200500000000', FailureReason::InvalidYear],
             ['3202444139959:', FailureReason::InvalidCharacters],
             ["3202444139959\xFF", FailureReason::InvalidCharacters],

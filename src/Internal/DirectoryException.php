@@ -11,8 +11,13 @@ use Throwable;
 /** @internal */
 final class DirectoryException extends RuntimeException
 {
-    public function __construct(public readonly UnavailableReason $reason, ?Throwable $previous = null)
+    public function __construct(public readonly UnavailableReason $reason, ?Throwable $previous = null, ?string $message = null)
     {
-        parent::__construct('APIEx directory failure: '.$reason->value, 0, $previous);
+        parent::__construct($message ?? match ($reason) {
+            UnavailableReason::Transport => 'The APIEx request failed before a response was received.',
+            UnavailableReason::HttpStatus => 'APIEx returned an unexpected HTTP status.',
+            UnavailableReason::InvalidJson => 'APIEx returned invalid JSON.',
+            default => 'APIEx returned an unexpected response schema.',
+        }, 0, $previous);
     }
 }
