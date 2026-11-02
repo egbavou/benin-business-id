@@ -70,5 +70,11 @@
     "support": {
         "issues": "https://github.com/egbavou/benin-business-id/issues",
         "source": "https://github.com/egbavou/benin-business-id"
-    }
+    },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/egbavou"
+        }
+    ]
 }
